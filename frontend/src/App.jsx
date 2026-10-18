@@ -34,7 +34,7 @@ const getInitialServerUrl = () => {
       return 'http://localhost:3000';
     }
   }
-  return 'https://imposter-gameserver.onrender.com';
+  return 'https://who-fn5o.onrender.com';
 };
 
 export default function App() {
