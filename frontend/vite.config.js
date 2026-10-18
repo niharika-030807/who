@@ -11,5 +11,8 @@ export default defineConfig({
         ws: true
       }
     }
+  },
+  preview: {
+    allowedHosts: true
   }
 });
