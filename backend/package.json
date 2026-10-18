@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "build": "echo 'Backend ready'",
     "dev": "node server.js",
     "test": "node test_gameplay.js"
   },
