@@ -13,8 +13,12 @@ import HostKickModal from './components/HostKickModal';
 import InGameChatWidget from './components/InGameChatWidget';
 import { sound } from './utils/audio';
 
-// Resolve default server URL: priority to VITE_SERVER_URL, then localhost:3000 for local dev, then current origin
+// Resolve default server URL: priority to localStorage, VITE_SERVER_URL, localhost, or Render cloud backend
 const getInitialServerUrl = () => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('who_custom_server');
+    if (saved && saved.trim()) return saved.trim();
+  }
   const envUrl = import.meta.env.VITE_SERVER_URL;
   if (envUrl && envUrl.trim()) {
     const trimmed = envUrl.trim();
@@ -29,9 +33,8 @@ const getInitialServerUrl = () => {
     if (isLocal) {
       return 'http://localhost:3000';
     }
-    return window.location.origin;
   }
-  return 'http://localhost:3000';
+  return 'https://imposter-gameserver.onrender.com';
 };
 
 export default function App() {
@@ -158,20 +161,24 @@ export default function App() {
 
   const activePlayerId = playerId || socketRef.current?.id;
 
-  // Toggle server between local and cloud/origin
-  const toggleServer = () => {
-    const isLocal = serverUrl.includes('localhost') || serverUrl.includes('127.0.0.1');
-    const cloudUrl =
-      import.meta.env.VITE_SERVER_URL ||
-      (typeof window !== 'undefined' && !isLocal ? window.location.origin : 'https://imposter-gameserver.onrender.com');
-
-    const nextUrl = isLocal ? cloudUrl : 'http://localhost:3000';
-    setServerUrl(nextUrl);
-    setScreen('home');
-    setGameState(null);
-    setPlayerId(null);
-    setMyRole(null);
-    setChatMessages([]);
+  // Allow manual entry or editing of backend URL
+  const handleEditServerUrl = () => {
+    const entered = window.prompt(
+      'Enter your Backend URL on Render (e.g. https://who-backend.onrender.com or http://localhost:3000):',
+      serverUrl
+    );
+    if (entered && entered.trim()) {
+      let clean = entered.trim();
+      if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+        clean = `https://${clean}`;
+      }
+      try {
+        localStorage.setItem('who_custom_server', clean);
+      } catch (e) {}
+      setServerUrl(clean);
+      setConnected(false);
+      showToast(`Connecting to ${clean}...`, 'info');
+    }
   };
 
   const handleKickPlayer = useCallback((targetPlayerId, targetPlayerName) => {
@@ -210,17 +217,53 @@ export default function App() {
       )}
 
       {!connected && (
-        <div className="connection-banner">Connecting to server…</div>
+        <div
+          className="connection-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            flexWrap: 'wrap',
+            padding: '8px 12px',
+            fontSize: '13px'
+          }}
+        >
+          <span>
+            Connecting to <strong>{serverUrl}</strong>... (Free Render servers take ~30s to wake up)
+          </span>
+          <button
+            type="button"
+            onClick={handleEditServerUrl}
+            style={{
+              background: '#0a0a0f',
+              color: '#00f3ff',
+              border: '1px solid #00f3ff',
+              borderRadius: '6px',
+              padding: '2px 10px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 700
+            }}
+          >
+            ⚙️ Edit Backend URL
+          </button>
+        </div>
       )}
 
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
 
       {screen === 'home' && (
         <div className="top-nav">
-          <div className="server-badge" onClick={toggleServer} title="Click to switch server">
+          <div
+            className="server-badge"
+            onClick={handleEditServerUrl}
+            title="Click to change or edit backend URL"
+            style={{ cursor: 'pointer' }}
+          >
             <span className={`status-dot ${connected ? 'online' : ''}`} />
             <span>
-              Server: {serverUrl.includes('localhost') || serverUrl.includes('127.0.0.1') ? 'Localhost:3000' : 'Cloud Server'}
+              Backend: {connected ? '🟢 Connected' : '🟡 Connecting'} ({serverUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')})
             </span>
           </div>
         </div>
