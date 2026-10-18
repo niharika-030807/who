@@ -3,14 +3,17 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const wordPairs = require('./words');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend if dist exists
-const distPath = path.join(__dirname, 'dist');
+// Serve static frontend if dist exists (in ../frontend/dist or ./dist)
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+const localDistPath = path.join(__dirname, 'dist');
+const distPath = fs.existsSync(frontendDistPath) ? frontendDistPath : localDistPath;
 app.use(express.static(distPath));
 
 const server = http.createServer(app);
@@ -737,23 +740,27 @@ io.on('connection', (socket) => {
   });
 });
 
-// Fallback to index.html for SPA client routes
+// Fallback to index.html for SPA client routes or server status
 app.get('*', (req, res) => {
   const indexPath = path.join(distPath, 'index.html');
-  res.sendFile(indexPath, err => {
-    if (err) {
-      res.send(`
-        <!doctype html>
-        <html>
-          <head><title>WHO? Game Server</title></head>
-          <body style="font-family:sans-serif; background:#030712; color:#fff; text-align:center; padding:40px;">
-            <h1>WHO? — The Imposter Game Server</h1>
-            <p>Server is running on port ${PORT}. Run <code>npm run build</code> to serve the Vite frontend from here.</p>
-          </body>
-        </html>
-      `);
-    }
-  });
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  res.send(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>WHO? Game Server</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body style="font-family:sans-serif; background:#030712; color:#fff; text-align:center; padding:60px 20px; line-height:1.6;">
+        <h1 style="color:#00f3ff; margin-bottom:12px;">🎮 WHO? — The Imposter Game Server</h1>
+        <p style="font-size:18px; color:#2a9d8f; font-weight:600;">Status: 🟢 WebSocket & API Ready</p>
+        <p style="color:#99b; margin-top:20px;">Server is listening on port ${PORT}.</p>
+      </body>
+    </html>
+  `);
 });
 
 const PORT = process.env.PORT || 3000;

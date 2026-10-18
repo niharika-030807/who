@@ -1,25 +1,19 @@
 {
-  "name": "who-imposter-game",
+  "name": "who-imposter-game-monorepo",
   "version": "1.0.0",
-  "description": "WHO — The Imposter Game with full multiplayer backend, bots, and rich audio effects",
-  "main": "server.js",
+  "private": true,
+  "description": "WHO — The Imposter Game with separate frontend (React/Vite) and backend (Node.js/Socket.io)",
   "scripts": {
-    "dev:client": "vite",
-    "dev:server": "node server.js",
-    "build": "vite build",
-    "start": "node server.js",
-    "dev": "node -e \"console.log('Use npm run start for all-in-one server+client, or npm run dev:client / npm run dev:server')\""
+    "start": "node backend/server.js",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "test:backend": "npm --prefix backend test"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "vite": "^6.1.0"
+    "socket.io": "^4.8.1"
   }
 }

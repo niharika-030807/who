@@ -13,14 +13,29 @@ import HostKickModal from './components/HostKickModal';
 import InGameChatWidget from './components/InGameChatWidget';
 import { sound } from './utils/audio';
 
-// Default to same origin or fallback to local / cloud server
-const DEFAULT_SERVER =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3000'
-    : 'https://imposter-gameserver.onrender.com';
+// Resolve default server URL: priority to VITE_SERVER_URL, then localhost:3000 for local dev, then current origin
+const getInitialServerUrl = () => {
+  const envUrl = import.meta.env.VITE_SERVER_URL;
+  if (envUrl && envUrl.trim()) {
+    const trimmed = envUrl.trim();
+    return trimmed.startsWith('http://') || trimmed.startsWith('https://')
+      ? trimmed
+      : `https://${trimmed}`;
+  }
+  if (typeof window !== 'undefined') {
+    const isLocal =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      return 'http://localhost:3000';
+    }
+    return window.location.origin;
+  }
+  return 'http://localhost:3000';
+};
 
 export default function App() {
-  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
+  const [serverUrl, setServerUrl] = useState(getInitialServerUrl);
   const [connected, setConnected] = useState(false);
   const [screen, setScreen] = useState('home');
   const [gameState, setGameState] = useState(null);
@@ -143,12 +158,14 @@ export default function App() {
 
   const activePlayerId = playerId || socketRef.current?.id;
 
-  // Toggle server between local and cloud
+  // Toggle server between local and cloud/origin
   const toggleServer = () => {
-    const nextUrl =
-      serverUrl === 'https://imposter-gameserver.onrender.com'
-        ? 'http://localhost:3000'
-        : 'https://imposter-gameserver.onrender.com';
+    const isLocal = serverUrl.includes('localhost') || serverUrl.includes('127.0.0.1');
+    const cloudUrl =
+      import.meta.env.VITE_SERVER_URL ||
+      (typeof window !== 'undefined' && !isLocal ? window.location.origin : 'https://imposter-gameserver.onrender.com');
+
+    const nextUrl = isLocal ? cloudUrl : 'http://localhost:3000';
     setServerUrl(nextUrl);
     setScreen('home');
     setGameState(null);
@@ -203,7 +220,7 @@ export default function App() {
           <div className="server-badge" onClick={toggleServer} title="Click to switch server">
             <span className={`status-dot ${connected ? 'online' : ''}`} />
             <span>
-              Server: {serverUrl.includes('render') ? 'Cloud (Render)' : 'Localhost:3000'}
+              Server: {serverUrl.includes('localhost') || serverUrl.includes('127.0.0.1') ? 'Localhost:3000' : 'Cloud Server'}
             </span>
           </div>
         </div>
